@@ -28,6 +28,7 @@ class DataLoaderH5(object):
         
     def next_batch(self, batch_size):
         labels_batch = np.zeros(batch_size)
+        hsv_batch = np.zeros(batch_size, 3)
         images_batch = np.zeros((batch_size, self.fine_size, self.fine_size, 3)) 
         
         for i in range(batch_size):
@@ -44,13 +45,14 @@ class DataLoaderH5(object):
                 offset_w = (self.load_size-self.fine_size)/2
 
             images_batch[i, ...] = image[offset_h:offset_h+self.fine_size, offset_w:offset_w+self.fine_size, :]
+            hsv_batch[i, ...] = self.hsv_set[self._idx]
             labels_batch[i, ...] = self.lab_set[self._idx]
             
             self._idx += 1
             if self._idx == self.num:
                 self._idx = 0
         
-        return images_batch, labels_batch
+        return images_batch, labels_batch, hsv_batch
     
     def size(self):
         return self.num

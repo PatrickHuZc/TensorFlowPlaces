@@ -15,10 +15,11 @@ class DataLoaderH5(object):
         # read data info from lists
         f = h5py.File(kwargs['data_h5'], "r")
         self.im_set = f['images']
+        self.hsv_set = f['hsv']
         self.lab_set = f['labels']
-
+        
         self.num = self.im_set.shape[0]
-        assert self.im_set.shape[0]==self.lab_set.shape[0], '#images and #labels do not match!'
+        assert self.im_set.shape[0]==self.hsv_set.shape[0]==self.lab_set.shape[0], 'images, hsv, and labels dimensions do not match!'
         assert self.im_set.shape[1]==self.load_size, 'Image size error!'
         assert self.im_set.shape[2]==self.load_size, 'Image size error!'
         print('# Images found:'), self.num

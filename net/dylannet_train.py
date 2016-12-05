@@ -34,9 +34,18 @@ def alexnet(x, keep_dropout):
         'wc4_bot': tf.Variable(tf.random_normal([3, 3, 384, 256], stddev=np.sqrt(2. / (3 * 3 * 384)))),
         'wc5_bot': tf.Variable(tf.random_normal([3, 3, 256, 256], stddev=np.sqrt(2. / (3 * 3 * 256)))),
 
-        'wf6': tf.Variable(tf.random_normal([7 * 7 * 256, 4096], stddev=np.sqrt(2. / (7 * 7 * 256)))),
-        'wf7': tf.Variable(tf.random_normal([4096, 4096], stddev=np.sqrt(2. / 4096))),
-        'wo': tf.Variable(tf.random_normal([4096, 100], stddev=np.sqrt(2. / 4096)))
+        'wf6_tt': tf.Variable(tf.random_normal([7 * 7 * 256, 4096], stddev=np.sqrt(2. / (7 * 7 * 256)))),
+        'wf6_tb': tf.Variable(tf.random_normal([7 * 7 * 256, 4096], stddev=np.sqrt(2. / (7 * 7 * 256)))),
+        'wf6_bb': tf.Variable(tf.random_normal([7 * 7 * 256, 4096], stddev=np.sqrt(2. / (7 * 7 * 256)))),
+        'wf6_bt': tf.Variable(tf.random_normal([7 * 7 * 256, 4096], stddev=np.sqrt(2. / (7 * 7 * 256)))),
+
+        'wf7_tt': tf.Variable(tf.random_normal([4096, 4096], stddev=np.sqrt(2. / 4096))),
+        'wf7_tb': tf.Variable(tf.random_normal([4096, 4096], stddev=np.sqrt(2. / 4096))),
+        'wf7_bb': tf.Variable(tf.random_normal([4096, 4096], stddev=np.sqrt(2. / 4096))),
+        'wf7_bt': tf.Variable(tf.random_normal([4096, 4096], stddev=np.sqrt(2. / 4096))),
+
+        'wo_top': tf.Variable(tf.random_normal([4096, 100], stddev=np.sqrt(2. / 4096)))
+        'wo_bot': tf.Variable(tf.random_normal([4096, 100], stddev=np.sqrt(2. / 4096)))
     }
 
     biases = {
@@ -52,8 +61,12 @@ def alexnet(x, keep_dropout):
         'bc4_bot': tf.Variable(tf.zeros(256)),
         'bc5_bot': tf.Variable(tf.zeros(256)),
 
-        'bf6': tf.Variable(tf.zeros(4096)),
-        'bf7': tf.Variable(tf.zeros(4096)),
+        'bf6_top': tf.Variable(tf.zeros(4096)),
+        'bf6_bot': tf.Variable(tf.zeros(4096)),
+
+        'bf7_top': tf.Variable(tf.zeros(4096)),
+        'bf7_bot': tf.Variable(tf.zeros(4096)),
+
         'bo': tf.Variable(tf.zeros(100))
     }
 
@@ -110,19 +123,34 @@ def alexnet(x, keep_dropout):
     pool5_bot = tf.nn.max_pool(conv5_bot, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
     
     # ------------------------------Fully Connected------------------------------- #
-    # FC + ReLU + Dropout
-    fc6 = tf.reshape(pool5_top, [-1, weights['wf6'].get_shape().as_list()[0]])
-    fc6 = tf.add(tf.matmul(fc6, weights['wf6']), biases['bf6'])
-    fc6 = tf.nn.relu(fc6)
-    fc6 = tf.nn.dropout(fc6, keep_dropout)
 
-    # FC + ReLU + Dropout
-    fc7 = tf.add(tf.matmul(fc6, weights['wf7']), biases['bf7'])
-    fc7 = tf.nn.relu(fc7)
-    fc7 = tf.nn.dropout(fc7, keep_dropout)
+    pool5_top_1d = tf.reshape(pool5_top, [-1, weights['wf6_top'].get_shape().as_list()[0]])
+    pool5_bot_1d = tf.reshape(pool5_top, [-1, weights['wf6_top'].get_shape().as_list()[0]])
+
+    # FC cross
+    # fc6_top = tf.add(tf.matmul(pool5_top_1d, weights['wf6_tt']), biases['bf7_top'])
+    fc6_top = tf.add(tf.add(tf.matmul(pool5_top_1d, weights['wf6_tt']), tf.matmul(pool5_bot_1d, weights['wf6_bt'])), biases['bf6_top'])
+    fc6_top = tf.nn.relu(fc6_top)
+    fc6_top = tf.nn.dropout(fc6_top, keep_dropout)
+
+    # fc6_bot = tf.add(tf.matmul(pool5_bot_1d, weights['wf7_bb']), biases['bf7_bot'])
+    fc6_bot = tf.add(tf.add(tf.matmul(pool5_top_1d, weights['wf6_tb']), tf.matmul(pool5_bot_1d, weights['wf6_bb'])), biases['bf6_bot'])
+    fc6_bot = tf.nn.relu(fc6_bot)
+    fc6_bot = tf.nn.dropout(fc6_bot, keep_dropout)
+
+    # FC cross
+    # fc7_top = tf.add(tf.matmul(fc6_top, weights['wf7_tt']), biases['bf7_top'])
+    fc7_top = tf.add(tf.add(tf.matmul(fc6_top, weights['wf7_tt']), tf.matmul(fc6_bot, weights['wf7_bt'])), biases['bf7_top'])
+    fc7_top = tf.nn.relu(fc7_top)
+    fc7_top = tf.nn.dropout(fc7_top, keep_dropout)
+
+    # fc7_bot = tf.add(tf.matmul(fc6_bot, weights['wf7_bb']), biases['bf7_bot'])
+    fc7_bot = tf.add(tf.add(tf.matmul(fc6_top, weights['wf7_tb']), tf.matmul(fc6_bot, weights['wf7_bb'])), biases['bf7_bot'])
+    fc7_bot = tf.nn.relu(fc7_bot)
+    fc7_bot = tf.nn.dropout(fc7_bot, keep_dropout)
 
     # Output FC
-    out = tf.add(tf.matmul(fc7, weights['wo']), biases['bo'])
+    out = tf.add(tf.add(tf.matmul(fc7_top, weights['wo_top']), tf.matmul(fc7_bot, weights['wo_bot'])), biases['bo'])
 
     return out
 

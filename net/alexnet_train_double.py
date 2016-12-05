@@ -1,7 +1,7 @@
 import os, datetime
 import numpy as np
 import tensorflow as tf
-from DataLoader2 import *
+from DataLoader import *
 
 # Dataset Parameters
 batch_size = 200
@@ -24,12 +24,11 @@ def alexnet(x, keep_dropout):
         'wc1': tf.Variable(tf.random_normal([11, 11, 3, 96], stddev=np.sqrt(2./(11*11*3)))),
         'wc2': tf.Variable(tf.random_normal([5, 5, 96, 256], stddev=np.sqrt(2./(5*5*96)))),
         'wc3': tf.Variable(tf.random_normal([3, 3, 256, 384], stddev=np.sqrt(2./(3*3*256)))),
-        'wc4': tf.Variable(tf.random_normal([3, 3, 384, 384], stddev=np.sqrt(2./(3*3*384)))),
-        'wc5': tf.Variable(tf.random_normal([3, 3, 384, 256], stddev=np.sqrt(2./(3*3*384)))),
-        'wc6': tf.Variable(tf.random_normal([3, 3, 256, 256], stddev=np.sqrt(2./(3*3*256)))),
+        'wc4': tf.Variable(tf.random_normal([3, 3, 384, 256], stddev=np.sqrt(2./(3*3*384)))),
+        'wc5': tf.Variable(tf.random_normal([3, 3, 256, 256], stddev=np.sqrt(2./(3*3*256)))),
 
-        'wf7': tf.Variable(tf.random_normal([7*7*256, 4096], stddev=np.sqrt(2./(7*7*256)))),
-        'wf8': tf.Variable(tf.random_normal([4096, 4096], stddev=np.sqrt(2./4096))),
+        'wf6': tf.Variable(tf.random_normal([7*7*256, 4096], stddev=np.sqrt(2./(7*7*256)))),
+        'wf7': tf.Variable(tf.random_normal([4096, 4096], stddev=np.sqrt(2./4096))),
         'wo': tf.Variable(tf.random_normal([4096, 100], stddev=np.sqrt(2./4096)))
     }
 
@@ -37,15 +36,40 @@ def alexnet(x, keep_dropout):
         'bc1': tf.Variable(tf.zeros(96)),
         'bc2': tf.Variable(tf.zeros(256)),
         'bc3': tf.Variable(tf.zeros(384)),
-        'bc4': tf.Variable(tf.zeros(384)),
+        'bc4': tf.Variable(tf.zeros(256)),
         'bc5': tf.Variable(tf.zeros(256)),
-        'bc6': tf.Variable(tf.zeros(256)),
 
+        'bf6': tf.Variable(tf.zeros(4096)),
         'bf7': tf.Variable(tf.zeros(4096)),
-        'bf8': tf.Variable(tf.zeros(4096)),
         'bo': tf.Variable(tf.zeros(100))
     }
+    
+    weights_2 = {
+        'wc1': tf.Variable(tf.random_normal([11, 11, 3, 96], stddev=np.sqrt(2./(11*11*3)))),
+        'wc2': tf.Variable(tf.random_normal([5, 5, 96, 256], stddev=np.sqrt(2./(5*5*96)))),
+        'wc3': tf.Variable(tf.random_normal([3, 3, 256, 384], stddev=np.sqrt(2./(3*3*256)))),
+        'wc4': tf.Variable(tf.random_normal([3, 3, 384, 256], stddev=np.sqrt(2./(3*3*384)))),
+        'wc5': tf.Variable(tf.random_normal([3, 3, 256, 256], stddev=np.sqrt(2./(3*3*256)))),
 
+        'wf6': tf.Variable(tf.random_normal([7*7*256, 4096], stddev=np.sqrt(2./(7*7*256)))),
+        'wf7': tf.Variable(tf.random_normal([4096, 4096], stddev=np.sqrt(2./4096))),
+        'wo': tf.Variable(tf.random_normal([4096, 100], stddev=np.sqrt(2./4096)))
+    }
+
+    biases_2 = {
+        'bc1': tf.Variable(tf.zeros(96)),
+        'bc2': tf.Variable(tf.zeros(256)),
+        'bc3': tf.Variable(tf.zeros(384)),
+        'bc4': tf.Variable(tf.zeros(256)),
+        'bc5': tf.Variable(tf.zeros(256)),
+
+        'bf6': tf.Variable(tf.zeros(4096)),
+        'bf7': tf.Variable(tf.zeros(4096)),
+    }
+
+    
+    #### BRANCH 1
+    
     # Conv + ReLU + LRN + Pool, 224->55->27
     conv1 = tf.nn.conv2d(x, weights['wc1'], strides=[1, 4, 4, 1], padding='SAME')
     conv1 = tf.nn.relu(tf.nn.bias_add(conv1, biases['bc1']))
@@ -61,33 +85,71 @@ def alexnet(x, keep_dropout):
     # Conv + ReLU, 13-> 13
     conv3 = tf.nn.conv2d(pool2, weights['wc3'], strides=[1, 1, 1, 1], padding='SAME')
     conv3 = tf.nn.relu(tf.nn.bias_add(conv3, biases['bc3']))
-    
+
     # Conv + ReLU, 13-> 13
     conv4 = tf.nn.conv2d(conv3, weights['wc4'], strides=[1, 1, 1, 1], padding='SAME')
     conv4 = tf.nn.relu(tf.nn.bias_add(conv4, biases['bc4']))
 
-    # Conv + ReLU, 13-> 13
+    # Conv + ReLU + Pool, 13->6
     conv5 = tf.nn.conv2d(conv4, weights['wc5'], strides=[1, 1, 1, 1], padding='SAME')
     conv5 = tf.nn.relu(tf.nn.bias_add(conv5, biases['bc5']))
-
-    # Conv + ReLU + Pool, 13->6
-    conv6 = tf.nn.conv2d(conv5, weights['wc6'], strides=[1, 1, 1, 1], padding='SAME')
-    conv6 = tf.nn.relu(tf.nn.bias_add(conv6, biases['bc6']))
-    pool6 = tf.nn.max_pool(conv6, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
+    pool5 = tf.nn.max_pool(conv5, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
 
     # FC + ReLU + Dropout
-    fc7 = tf.reshape(pool6, [-1, weights['wf7'].get_shape().as_list()[0]])
-    fc7 = tf.add(tf.matmul(fc7, weights['wf7']), biases['bf7'])
+    fc6 = tf.reshape(pool5, [-1, weights['wf6'].get_shape().as_list()[0]])
+    fc6 = tf.add(tf.matmul(fc6, weights['wf6']), biases['bf6'])
+    fc6 = tf.nn.relu(fc6)
+    fc6 = tf.nn.dropout(fc6, keep_dropout)
+    
+    # FC + ReLU + Dropout
+    fc7 = tf.add(tf.matmul(fc6, weights['wf7']), biases['bf7'])
     fc7 = tf.nn.relu(fc7)
     fc7 = tf.nn.dropout(fc7, keep_dropout)
     
+    
+    #### BRANCH 2
+    
+    # Conv + ReLU + LRN + Pool, 224->55->27
+    conv1_2 = tf.nn.conv2d(x, weights_2['wc1'], strides=[1, 4, 4, 1], padding='SAME')
+    conv1_2 = tf.nn.relu(tf.nn.bias_add(conv1_2, biases_2['bc1']))
+    lrn1_2 = tf.nn.local_response_normalization(conv1_2, depth_radius=5, bias=1.0, alpha=1e-4, beta=0.75)
+    pool1_2 = tf.nn.max_pool(lrn1_2, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
+
+    # Conv + ReLU + LRN + Pool, 27-> 13
+    conv2_2 = tf.nn.conv2d(pool1_2, weights_2['wc2'], strides=[1, 1, 1, 1], padding='SAME')
+    conv2_2 = tf.nn.relu(tf.nn.bias_add(conv2_2, biases_2['bc2']))
+    lrn2_2 = tf.nn.local_response_normalization(conv2_2, depth_radius=5, bias=1.0, alpha=1e-4, beta=0.75)
+    pool2_2 = tf.nn.max_pool(lrn2_2, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
+
+    # Conv + ReLU, 13-> 13
+    conv3_2 = tf.nn.conv2d(pool2_2, weights_2['wc3'], strides=[1, 1, 1, 1], padding='SAME')
+    conv3_2 = tf.nn.relu(tf.nn.bias_add(conv3_2, biases['bc3']))
+
+    # Conv + ReLU, 13-> 13
+    conv4_2 = tf.nn.conv2d(conv3_2, weights_2['wc4'], strides=[1, 1, 1, 1], padding='SAME')
+    conv4_2 = tf.nn.relu(tf.nn.bias_add(conv4_2, biases_2['bc4']))
+
+    # Conv + ReLU + Pool, 13->6
+    conv5_2 = tf.nn.conv2d(conv4_2, weights_2['wc5'], strides=[1, 1, 1, 1], padding='SAME')
+    conv5_2 = tf.nn.relu(tf.nn.bias_add(conv5_2, biases_2['bc5']))
+    pool5_2 = tf.nn.max_pool(conv5_2, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
+
     # FC + ReLU + Dropout
-    fc8 = tf.add(tf.matmul(fc7, weights['wf8']), biases['bf8'])
-    fc8 = tf.nn.relu(fc8)
-    fc8 = tf.nn.dropout(fc8, keep_dropout)
+    fc6_2 = tf.reshape(pool5_2, [-1, weights_2['wf6'].get_shape().as_list()[0]])
+    fc6_2 = tf.add(tf.matmul(fc6_2, weights_2['wf6']), biases_2['bf6'])
+    fc6_2 = tf.nn.relu(fc6_2)
+    fc6_2 = tf.nn.dropout(fc6_2, keep_dropout)
+    
+    # FC + ReLU + Dropout
+    fc7_2 = tf.add(tf.matmul(fc6_2, weights_2['wf7']), biases_2['bf7'])
+    fc7_2 = tf.nn.relu(fc7_2)
+    fc7_2 = tf.nn.dropout(fc7_2, keep_dropout)
+    
+    
+    #### Connecting branch
 
     # Output FC
-    out = tf.add(tf.matmul(fc8, weights['wo']), biases['bo'])
+    out = tf.add(tf.matmul(fc7, weights['wo']) + tf.matmul(fc7_2, weights_2['wo']), biases['bo'])
     
     return out
 
@@ -153,7 +215,7 @@ with tf.Session() as sess:
 
     while step < training_iters:
         # Load a batch of training data
-        images_batch, labels_batch, hsv_batch = loader_train.next_batch(batch_size)
+        images_batch, labels_batch = loader_train.next_batch(batch_size)
         
         if step % step_display == 0:
             print '[%s]:' %(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
@@ -166,7 +228,7 @@ with tf.Session() as sess:
             "{:.2f}".format(acc5)
 
             # Calculate batch loss and accuracy on validation set
-            images_batch_val, labels_batch_val, hsv_batch_val = loader_val.next_batch(batch_size)    
+            images_batch_val, labels_batch_val = loader_val.next_batch(batch_size)    
             l, acc1, acc5 = sess.run([loss, accuracy1, accuracy5], feed_dict={x: images_batch_val, y: labels_batch_val, keep_dropout: 1.}) 
             print "-Iter " + str(step) + ", Validation Loss= " + \
             "{:.4f}".format(l) + ", Accuracy Top1 = " + \

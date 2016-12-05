@@ -28,7 +28,7 @@ class DataLoaderH5(object):
         
     def next_batch(self, batch_size):
         labels_batch = np.zeros(batch_size)
-        hsv_batch = np.zeros(batch_size, 3)
+        hsv_batch = np.zeros((batch_size, 3))
         images_batch = np.zeros((batch_size, self.fine_size, self.fine_size, 3)) 
         
         for i in range(batch_size):

@@ -19,6 +19,38 @@ step_save = 10000
 path_save = 'alexnet'
 start_from = ''
 
+###################################################################################################
+#### Custom settings
+
+extra_fully_connected_layer_before_output = False
+# IF TRUE
+#       fc7   fc8  out
+#  ...---[]\
+#           >--[]---[]===
+#  ...---[]/
+
+# IF FALSE
+#       fc7   out
+#  ...---[]\
+#           >--[]===
+#  ...---[]/
+
+
+interconnected_fully_connected = True
+# IF TRUE
+#      conv5 fc6  fc7
+#  ...---[]\-/[]\-/[]\
+#           X    X    >---...===
+#  ...---[]/-\[]/-\[]/
+
+# IF FALSE
+#      conv5 fc6  fc7
+#  ...---[]---[]---[]\
+#                     >---...===
+#  ...---[]---[]---[]/
+
+###################################################################################################
+
 def alexnet(x, keep_dropout):
     weights = {
         'wc1_t': tf.Variable(tf.random_normal([11, 11, 3, 96], stddev=np.sqrt(2./(11*11*3)))),
@@ -34,16 +66,23 @@ def alexnet(x, keep_dropout):
         'wc5_b': tf.Variable(tf.random_normal([3, 3, 256, 256], stddev=np.sqrt(2./(3*3*256)))),
 
         'wf6_tt': tf.Variable(tf.random_normal([7*7*256, 4096], stddev=np.sqrt(2./(7*7*256)))),
-        'wf6_tb': tf.Variable(tf.random_normal([7*7*256, 4096], stddev=np.sqrt(2./(7*7*256)))),
-        'wf6_bt': tf.Variable(tf.random_normal([7*7*256, 4096], stddev=np.sqrt(2./(7*7*256)))),
+        'wf6_tb': tf.Variable(tf.random_normal([7*7*256, 4096], stddev=np.sqrt(2./(7*7*256)))), # NOT USED IF interconnected_fully_connected == False
+        'wf6_bt': tf.Variable(tf.random_normal([7*7*256, 4096], stddev=np.sqrt(2./(7*7*256)))), # NOT USED IF interconnected_fully_connected == False
         'wf6_bb': tf.Variable(tf.random_normal([7*7*256, 4096], stddev=np.sqrt(2./(7*7*256)))),
         'wf7_tt': tf.Variable(tf.random_normal([4096, 4096], stddev=np.sqrt(2./4096))),
-        'wf7_tb': tf.Variable(tf.random_normal([4096, 4096], stddev=np.sqrt(2./4096))),
-        'wf7_bt': tf.Variable(tf.random_normal([4096, 4096], stddev=np.sqrt(2./4096))),
+        'wf7_tb': tf.Variable(tf.random_normal([4096, 4096], stddev=np.sqrt(2./4096))), # NOT USED IF interconnected_fully_connected == False
+        'wf7_bt': tf.Variable(tf.random_normal([4096, 4096], stddev=np.sqrt(2./4096))), # NOT USED IF interconnected_fully_connected == False
         'wf7_bb': tf.Variable(tf.random_normal([4096, 4096], stddev=np.sqrt(2./4096))),
         
+        # USED IF fully_connected_layer_before_output
+        'wf8_t': tf.Variable(tf.random_normal([4096, 4096], stddev=np.sqrt(2./4096))),
+        'wf8_b': tf.Variable(tf.random_normal([4096, 4096], stddev=np.sqrt(2./4096))),
+        'wo': tf.Variable(tf.random_normal([4096, 100], stddev=np.sqrt(2./4096))),
+        # USED OTHERWISE
         'wo_t': tf.Variable(tf.random_normal([4096, 100], stddev=np.sqrt(2./4096))),
-        'wo_b': tf.Variable(tf.random_normal([4096, 100], stddev=np.sqrt(2./4096)))
+        'wo_b': tf.Variable(tf.random_normal([4096, 100], stddev=np.sqrt(2./4096))),
+        # END IF
+        
     }
 
     biases = {
@@ -64,7 +103,11 @@ def alexnet(x, keep_dropout):
         'bf7_t': tf.Variable(tf.zeros(4096)),
         'bf7_b': tf.Variable(tf.zeros(4096)),
         
-        'bo': tf.Variable(tf.zeros(100))
+        # IF fully_connected_layer_before_output
+        'bf8': tf.Variable(tf.zeros(4096)),
+        # END_IF
+        
+        'bo': tf.Variable(tf.zeros(100)),
     }
 
     ###############################################################################################
@@ -130,31 +173,49 @@ def alexnet(x, keep_dropout):
     pool5_b_temp = tf.reshape(pool5_b, [-1, weights['wf6_bt'].get_shape().as_list()[0]])
     
     # FC + ReLU + Dropout
-    fc6_t = tf.add(tf.matmul(pool5_t_temp, weights['wf6_tb']) + tf.matmul(pool5_b_temp, weights['wf6_tb']), biases['bf6_t'])
+    if interconnected_fully_connected:
+        fc6_t = tf.add(tf.matmul(pool5_t_temp, weights['wf6_tt']) + tf.matmul(pool5_b_temp, weights['wf6_tb']), biases['bf6_t'])
+    else:
+        fc6_t = tf.add(tf.matmul(pool5_t_temp, weights['wf6_tt']), biases['bf6_t'])
     fc6_t = tf.nn.relu(fc6_t)
     fc6_t = tf.nn.dropout(fc6_t, keep_dropout)
     
     # FC + ReLU + Dropout
-    fc6_b = tf.add(tf.matmul(pool5_b_temp, weights['wf6_bt']) + tf.matmul(pool5_b_temp, weights['wf6_bb']), biases['bf6_b'])
+    if interconnected_fully_connected:
+        fc6_b = tf.add(tf.matmul(pool5_b_temp, weights['wf6_bt']) + tf.matmul(pool5_b_temp, weights['wf6_bb']), biases['bf6_b'])
+    else:
+        fc6_b = tf.add(tf.matmul(pool5_b_temp, weights['wf6_bb']), biases['bf6_b'])
     fc6_b = tf.nn.relu(fc6_b)
     fc6_b = tf.nn.dropout(fc6_b, keep_dropout)
     
     # FC + ReLU + Dropout
-    fc7_t = tf.add(tf.matmul(fc6_t, weights['wf7_tt']) + tf.matmul(fc6_b, weights['wf7_tb']), biases['bf7_t'])
+    if interconnected_fully_connected:
+        fc7_t = tf.add(tf.matmul(fc6_t, weights['wf7_tt']) + tf.matmul(fc6_b, weights['wf7_tb']), biases['bf7_t'])
+    else:
+        fc7_t = tf.add(tf.matmul(fc6_t, weights['wf7_tt']), biases['bf7_t'])
     fc7_t = tf.nn.relu(fc7_t)
     fc7_t = tf.nn.dropout(fc7_t, keep_dropout)
     
     # FC + ReLU + Dropout
-    fc7_b = tf.add(tf.matmul(fc6_t, weights['wf7_bt']) + tf.matmul(fc6_b, weights['wf7_bb']), biases['bf7_b'])
+    if interconnected_fully_connected:
+        fc7_b = tf.add(tf.matmul(fc6_t, weights['wf7_bt']) + tf.matmul(fc6_b, weights['wf7_bb']), biases['bf7_b'])
+    else:
+        fc7_b = tf.add(tf.matmul(fc6_b, weights['wf7_bb']), biases['bf7_b'])
     fc7_b = tf.nn.relu(fc7_b)
     fc7_b = tf.nn.dropout(fc7_b, keep_dropout)
 
     ###############################################################################################
     #### Singleton branch
     
-    # Output FC
-    out = tf.add(tf.matmul(fc7_t, weights['wo_t']) + tf.matmul(fc7_b, weights['wo_b']), biases['bo'])
+    # FC + Output FC
+    if extra_fully_connected_layer_before_output:
+        fc8 = tf.add(tf.matmul(fc7_t, weights['wf8_t']) + tf.matmul(fc7_b, weights['wf8_b']), biases['bf8'])
+        out = tf.add(tf.matmul(fc8, weights['wo']), biases['bo'])
     
+    # Output FC
+    else:
+        out = tf.add(tf.matmul(fc7_t, weights['wo_t']) + tf.matmul(fc7_b, weights['wo_b']), biases['bo'])
+            
     return out
 
 # Construct dataloader

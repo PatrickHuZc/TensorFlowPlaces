@@ -19,138 +19,203 @@ step_save = 10000
 path_save = 'alexnet'
 start_from = ''
 
+###################################################################################################
+#### Custom settings
+
+extra_fully_connected_layer_before_output = False
+# IF TRUE
+#       fc7   fc8  out
+#  ...---[]\
+#           >--[]---[]===
+#  ...---[]/
+
+# IF FALSE
+#       fc7   out
+#  ...---[]\
+#           >--[]===
+#  ...---[]/
+
+
+interconnected_fully_connected = True
+# IF TRUE
+#      conv5 fc6  fc7
+#  ...---[]\-/[]\-/[]\
+#           X    X    >---...===
+#  ...---[]/-\[]/-\[]/
+
+# IF FALSE
+#      conv5 fc6  fc7
+#  ...---[]---[]---[]\
+#                     >---...===
+#  ...---[]---[]---[]/
+
+###################################################################################################
+
 def alexnet(x, keep_dropout):
     weights = {
-        'wc1': tf.Variable(tf.random_normal([11, 11, 3, 96], stddev=np.sqrt(2./(11*11*3)))),
-        'wc2': tf.Variable(tf.random_normal([5, 5, 96, 256], stddev=np.sqrt(2./(5*5*96)))),
-        'wc3': tf.Variable(tf.random_normal([3, 3, 256, 384], stddev=np.sqrt(2./(3*3*256)))),
-        'wc4': tf.Variable(tf.random_normal([3, 3, 384, 256], stddev=np.sqrt(2./(3*3*384)))),
-        'wc5': tf.Variable(tf.random_normal([3, 3, 256, 256], stddev=np.sqrt(2./(3*3*256)))),
+        'wc1_t': tf.Variable(tf.random_normal([11, 11, 3, 96], stddev=np.sqrt(2./(11*11*3)))),
+        'wc2_t': tf.Variable(tf.random_normal([5, 5, 96, 256], stddev=np.sqrt(2./(5*5*96)))),
+        'wc3_t': tf.Variable(tf.random_normal([3, 3, 256, 384], stddev=np.sqrt(2./(3*3*256)))),
+        'wc4_t': tf.Variable(tf.random_normal([3, 3, 384, 256], stddev=np.sqrt(2./(3*3*384)))),
+        'wc5_t': tf.Variable(tf.random_normal([3, 3, 256, 256], stddev=np.sqrt(2./(3*3*256)))),
+        
+        'wc1_b': tf.Variable(tf.random_normal([11, 11, 3, 96], stddev=np.sqrt(2./(11*11*3)))),
+        'wc2_b': tf.Variable(tf.random_normal([5, 5, 96, 256], stddev=np.sqrt(2./(5*5*96)))),
+        'wc3_b': tf.Variable(tf.random_normal([3, 3, 256, 384], stddev=np.sqrt(2./(3*3*256)))),
+        'wc4_b': tf.Variable(tf.random_normal([3, 3, 384, 256], stddev=np.sqrt(2./(3*3*384)))),
+        'wc5_b': tf.Variable(tf.random_normal([3, 3, 256, 256], stddev=np.sqrt(2./(3*3*256)))),
 
-        'wf6': tf.Variable(tf.random_normal([7*7*256, 4096], stddev=np.sqrt(2./(7*7*256)))),
-        'wf7': tf.Variable(tf.random_normal([4096, 4096], stddev=np.sqrt(2./4096))),
-        'wo': tf.Variable(tf.random_normal([4096, 100], stddev=np.sqrt(2./4096)))
+        'wf6_tt': tf.Variable(tf.random_normal([7*7*256, 4096], stddev=np.sqrt(2./(7*7*256)))),
+        'wf6_tb': tf.Variable(tf.random_normal([7*7*256, 4096], stddev=np.sqrt(2./(7*7*256)))), # NOT USED IF interconnected_fully_connected == False
+        'wf6_bt': tf.Variable(tf.random_normal([7*7*256, 4096], stddev=np.sqrt(2./(7*7*256)))), # NOT USED IF interconnected_fully_connected == False
+        'wf6_bb': tf.Variable(tf.random_normal([7*7*256, 4096], stddev=np.sqrt(2./(7*7*256)))),
+        'wf7_tt': tf.Variable(tf.random_normal([4096, 4096], stddev=np.sqrt(2./4096))),
+        'wf7_tb': tf.Variable(tf.random_normal([4096, 4096], stddev=np.sqrt(2./4096))), # NOT USED IF interconnected_fully_connected == False
+        'wf7_bt': tf.Variable(tf.random_normal([4096, 4096], stddev=np.sqrt(2./4096))), # NOT USED IF interconnected_fully_connected == False
+        'wf7_bb': tf.Variable(tf.random_normal([4096, 4096], stddev=np.sqrt(2./4096))),
+        
+        # USED IF fully_connected_layer_before_output
+        'wf8_t': tf.Variable(tf.random_normal([4096, 4096], stddev=np.sqrt(2./4096))),
+        'wf8_b': tf.Variable(tf.random_normal([4096, 4096], stddev=np.sqrt(2./4096))),
+        'wo': tf.Variable(tf.random_normal([4096, 100], stddev=np.sqrt(2./4096))),
+        # USED OTHERWISE
+        'wo_t': tf.Variable(tf.random_normal([4096, 100], stddev=np.sqrt(2./4096))),
+        'wo_b': tf.Variable(tf.random_normal([4096, 100], stddev=np.sqrt(2./4096))),
+        # END IF
+        
     }
 
     biases = {
-        'bc1': tf.Variable(tf.zeros(96)),
-        'bc2': tf.Variable(tf.zeros(256)),
-        'bc3': tf.Variable(tf.zeros(384)),
-        'bc4': tf.Variable(tf.zeros(256)),
-        'bc5': tf.Variable(tf.zeros(256)),
+        'bc1_t': tf.Variable(tf.zeros(96)),
+        'bc2_t': tf.Variable(tf.zeros(256)),
+        'bc3_t': tf.Variable(tf.zeros(384)),
+        'bc4_t': tf.Variable(tf.zeros(256)),
+        'bc5_t': tf.Variable(tf.zeros(256)),
+        
+        'bc1_b': tf.Variable(tf.zeros(96)),
+        'bc2_b': tf.Variable(tf.zeros(256)),
+        'bc3_b': tf.Variable(tf.zeros(384)),
+        'bc4_b': tf.Variable(tf.zeros(256)),
+        'bc5_b': tf.Variable(tf.zeros(256)),
 
-        'bf6': tf.Variable(tf.zeros(4096)),
-        'bf7': tf.Variable(tf.zeros(4096)),
-        'bo': tf.Variable(tf.zeros(100))
-    }
-    
-    weights_2 = {
-        'wc1': tf.Variable(tf.random_normal([11, 11, 3, 96], stddev=np.sqrt(2./(11*11*3)))),
-        'wc2': tf.Variable(tf.random_normal([5, 5, 96, 256], stddev=np.sqrt(2./(5*5*96)))),
-        'wc3': tf.Variable(tf.random_normal([3, 3, 256, 384], stddev=np.sqrt(2./(3*3*256)))),
-        'wc4': tf.Variable(tf.random_normal([3, 3, 384, 256], stddev=np.sqrt(2./(3*3*384)))),
-        'wc5': tf.Variable(tf.random_normal([3, 3, 256, 256], stddev=np.sqrt(2./(3*3*256)))),
-
-        'wf6': tf.Variable(tf.random_normal([7*7*256, 4096], stddev=np.sqrt(2./(7*7*256)))),
-        'wf7': tf.Variable(tf.random_normal([4096, 4096], stddev=np.sqrt(2./4096))),
-        'wo': tf.Variable(tf.random_normal([4096, 100], stddev=np.sqrt(2./4096)))
-    }
-
-    biases_2 = {
-        'bc1': tf.Variable(tf.zeros(96)),
-        'bc2': tf.Variable(tf.zeros(256)),
-        'bc3': tf.Variable(tf.zeros(384)),
-        'bc4': tf.Variable(tf.zeros(256)),
-        'bc5': tf.Variable(tf.zeros(256)),
-
-        'bf6': tf.Variable(tf.zeros(4096)),
-        'bf7': tf.Variable(tf.zeros(4096)),
+        'bf6_t': tf.Variable(tf.zeros(4096)),
+        'bf6_b': tf.Variable(tf.zeros(4096)),
+        'bf7_t': tf.Variable(tf.zeros(4096)),
+        'bf7_b': tf.Variable(tf.zeros(4096)),
+        
+        # IF fully_connected_layer_before_output
+        'bf8': tf.Variable(tf.zeros(4096)),
+        # END_IF
+        
+        'bo': tf.Variable(tf.zeros(100)),
     }
 
-    
+    ###############################################################################################
     #### BRANCH 1
     
     # Conv + ReLU + LRN + Pool, 224->55->27
-    conv1 = tf.nn.conv2d(x, weights['wc1'], strides=[1, 4, 4, 1], padding='SAME')
-    conv1 = tf.nn.relu(tf.nn.bias_add(conv1, biases['bc1']))
-    lrn1 = tf.nn.local_response_normalization(conv1, depth_radius=5, bias=1.0, alpha=1e-4, beta=0.75)
-    pool1 = tf.nn.max_pool(lrn1, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
+    conv1_t = tf.nn.conv2d(x, weights['wc1_t'], strides=[1, 4, 4, 1], padding='SAME')
+    conv1_t = tf.nn.relu(tf.nn.bias_add(conv1_t, biases['bc1_t']))
+    lrn1_t = tf.nn.local_response_normalization(conv1_t, depth_radius=5, bias=1.0, alpha=1e-4, beta=0.75)
+    pool1_t = tf.nn.max_pool(lrn1_t, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
 
     # Conv + ReLU + LRN + Pool, 27-> 13
-    conv2 = tf.nn.conv2d(pool1, weights['wc2'], strides=[1, 1, 1, 1], padding='SAME')
-    conv2 = tf.nn.relu(tf.nn.bias_add(conv2, biases['bc2']))
-    lrn2 = tf.nn.local_response_normalization(conv2, depth_radius=5, bias=1.0, alpha=1e-4, beta=0.75)
-    pool2 = tf.nn.max_pool(lrn2, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
+    conv2_t = tf.nn.conv2d(pool1_t, weights['wc2_t'], strides=[1, 1, 1, 1], padding='SAME')
+    conv2_t = tf.nn.relu(tf.nn.bias_add(conv2_t, biases['bc2_t']))
+    lrn2_t = tf.nn.local_response_normalization(conv2_t, depth_radius=5, bias=1.0, alpha=1e-4, beta=0.75)
+    pool2_t = tf.nn.max_pool(lrn2_t, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
 
     # Conv + ReLU, 13-> 13
-    conv3 = tf.nn.conv2d(pool2, weights['wc3'], strides=[1, 1, 1, 1], padding='SAME')
-    conv3 = tf.nn.relu(tf.nn.bias_add(conv3, biases['bc3']))
+    conv3_t = tf.nn.conv2d(pool2_t, weights['wc3_t'], strides=[1, 1, 1, 1], padding='SAME')
+    conv3_t = tf.nn.relu(tf.nn.bias_add(conv3_t, biases['bc3_t']))
 
     # Conv + ReLU, 13-> 13
-    conv4 = tf.nn.conv2d(conv3, weights['wc4'], strides=[1, 1, 1, 1], padding='SAME')
-    conv4 = tf.nn.relu(tf.nn.bias_add(conv4, biases['bc4']))
+    conv4_t = tf.nn.conv2d(conv3_t, weights['wc4_t'], strides=[1, 1, 1, 1], padding='SAME')
+    conv4_t = tf.nn.relu(tf.nn.bias_add(conv4_t, biases['bc4_t']))
 
     # Conv + ReLU + Pool, 13->6
-    conv5 = tf.nn.conv2d(conv4, weights['wc5'], strides=[1, 1, 1, 1], padding='SAME')
-    conv5 = tf.nn.relu(tf.nn.bias_add(conv5, biases['bc5']))
-    pool5 = tf.nn.max_pool(conv5, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
-
-    # FC + ReLU + Dropout
-    fc6 = tf.reshape(pool5, [-1, weights['wf6'].get_shape().as_list()[0]])
-    fc6 = tf.add(tf.matmul(fc6, weights['wf6']), biases['bf6'])
-    fc6 = tf.nn.relu(fc6)
-    fc6 = tf.nn.dropout(fc6, keep_dropout)
+    conv5_t = tf.nn.conv2d(conv4_t, weights['wc5_t'], strides=[1, 1, 1, 1], padding='SAME')
+    conv5_t = tf.nn.relu(tf.nn.bias_add(conv5_t, biases['bc5_t']))
+    pool5_t = tf.nn.max_pool(conv5_t, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
     
-    # FC + ReLU + Dropout
-    fc7 = tf.add(tf.matmul(fc6, weights['wf7']), biases['bf7'])
-    fc7 = tf.nn.relu(fc7)
-    fc7 = tf.nn.dropout(fc7, keep_dropout)
-    
-    
+    ###############################################################################################
     #### BRANCH 2
     
     # Conv + ReLU + LRN + Pool, 224->55->27
-    conv1_2 = tf.nn.conv2d(x, weights_2['wc1'], strides=[1, 4, 4, 1], padding='SAME')
-    conv1_2 = tf.nn.relu(tf.nn.bias_add(conv1_2, biases_2['bc1']))
-    lrn1_2 = tf.nn.local_response_normalization(conv1_2, depth_radius=5, bias=1.0, alpha=1e-4, beta=0.75)
-    pool1_2 = tf.nn.max_pool(lrn1_2, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
+    conv1_b = tf.nn.conv2d(x, weights['wc1_b'], strides=[1, 4, 4, 1], padding='SAME')
+    conv1_b = tf.nn.relu(tf.nn.bias_add(conv1_b, biases['bc1_b']))
+    lrn1_b = tf.nn.local_response_normalization(conv1_b, depth_radius=5, bias=1.0, alpha=1e-4, beta=0.75)
+    pool1_b = tf.nn.max_pool(lrn1_b, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
 
     # Conv + ReLU + LRN + Pool, 27-> 13
-    conv2_2 = tf.nn.conv2d(pool1_2, weights_2['wc2'], strides=[1, 1, 1, 1], padding='SAME')
-    conv2_2 = tf.nn.relu(tf.nn.bias_add(conv2_2, biases_2['bc2']))
-    lrn2_2 = tf.nn.local_response_normalization(conv2_2, depth_radius=5, bias=1.0, alpha=1e-4, beta=0.75)
-    pool2_2 = tf.nn.max_pool(lrn2_2, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
+    conv2_b = tf.nn.conv2d(pool1_b, weights['wc2_b'], strides=[1, 1, 1, 1], padding='SAME')
+    conv2_b = tf.nn.relu(tf.nn.bias_add(conv2_b, biases['bc2_b']))
+    lrn2_b = tf.nn.local_response_normalization(conv2_b, depth_radius=5, bias=1.0, alpha=1e-4, beta=0.75)
+    pool2_b = tf.nn.max_pool(lrn2_b, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
 
     # Conv + ReLU, 13-> 13
-    conv3_2 = tf.nn.conv2d(pool2_2, weights_2['wc3'], strides=[1, 1, 1, 1], padding='SAME')
-    conv3_2 = tf.nn.relu(tf.nn.bias_add(conv3_2, biases['bc3']))
+    conv3_b = tf.nn.conv2d(pool2_b, weights['wc3_b'], strides=[1, 1, 1, 1], padding='SAME')
+    conv3_b = tf.nn.relu(tf.nn.bias_add(conv3_b, biases['bc3_b']))
 
     # Conv + ReLU, 13-> 13
-    conv4_2 = tf.nn.conv2d(conv3_2, weights_2['wc4'], strides=[1, 1, 1, 1], padding='SAME')
-    conv4_2 = tf.nn.relu(tf.nn.bias_add(conv4_2, biases_2['bc4']))
+    conv4_b = tf.nn.conv2d(conv3_b, weights['wc4_b'], strides=[1, 1, 1, 1], padding='SAME')
+    conv4_b = tf.nn.relu(tf.nn.bias_add(conv4_b, biases['bc4_b']))
 
     # Conv + ReLU + Pool, 13->6
-    conv5_2 = tf.nn.conv2d(conv4_2, weights_2['wc5'], strides=[1, 1, 1, 1], padding='SAME')
-    conv5_2 = tf.nn.relu(tf.nn.bias_add(conv5_2, biases_2['bc5']))
-    pool5_2 = tf.nn.max_pool(conv5_2, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
+    conv5_b = tf.nn.conv2d(conv4_b, weights['wc5_b'], strides=[1, 1, 1, 1], padding='SAME')
+    conv5_b = tf.nn.relu(tf.nn.bias_add(conv5_b, biases['bc5_b']))
+    pool5_b = tf.nn.max_pool(conv5_b, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
 
-    # FC + ReLU + Dropout
-    fc6_2 = tf.reshape(pool5_2, [-1, weights_2['wf6'].get_shape().as_list()[0]])
-    fc6_2 = tf.add(tf.matmul(fc6_2, weights_2['wf6']), biases_2['bf6'])
-    fc6_2 = tf.nn.relu(fc6_2)
-    fc6_2 = tf.nn.dropout(fc6_2, keep_dropout)
+    ###############################################################################################
+    #### Interconnecting branch
+    
+    pool5_t_temp = tf.reshape(pool5_t, [-1, weights['wf6_tt'].get_shape().as_list()[0]])
+    pool5_b_temp = tf.reshape(pool5_b, [-1, weights['wf6_bt'].get_shape().as_list()[0]])
     
     # FC + ReLU + Dropout
-    fc7_2 = tf.add(tf.matmul(fc6_2, weights_2['wf7']), biases_2['bf7'])
-    fc7_2 = tf.nn.relu(fc7_2)
-    fc7_2 = tf.nn.dropout(fc7_2, keep_dropout)
+    if interconnected_fully_connected:
+        fc6_t = tf.add(tf.matmul(pool5_t_temp, weights['wf6_tt']) + tf.matmul(pool5_b_temp, weights['wf6_tb']), biases['bf6_t'])
+    else:
+        fc6_t = tf.add(tf.matmul(pool5_t_temp, weights['wf6_tt']), biases['bf6_t'])
+    fc6_t = tf.nn.relu(fc6_t)
+    fc6_t = tf.nn.dropout(fc6_t, keep_dropout)
     
+    # FC + ReLU + Dropout
+    if interconnected_fully_connected:
+        fc6_b = tf.add(tf.matmul(pool5_b_temp, weights['wf6_bt']) + tf.matmul(pool5_b_temp, weights['wf6_bb']), biases['bf6_b'])
+    else:
+        fc6_b = tf.add(tf.matmul(pool5_b_temp, weights['wf6_bb']), biases['bf6_b'])
+    fc6_b = tf.nn.relu(fc6_b)
+    fc6_b = tf.nn.dropout(fc6_b, keep_dropout)
     
-    #### Connecting branch
+    # FC + ReLU + Dropout
+    if interconnected_fully_connected:
+        fc7_t = tf.add(tf.matmul(fc6_t, weights['wf7_tt']) + tf.matmul(fc6_b, weights['wf7_tb']), biases['bf7_t'])
+    else:
+        fc7_t = tf.add(tf.matmul(fc6_t, weights['wf7_tt']), biases['bf7_t'])
+    fc7_t = tf.nn.relu(fc7_t)
+    fc7_t = tf.nn.dropout(fc7_t, keep_dropout)
+    
+    # FC + ReLU + Dropout
+    if interconnected_fully_connected:
+        fc7_b = tf.add(tf.matmul(fc6_t, weights['wf7_bt']) + tf.matmul(fc6_b, weights['wf7_bb']), biases['bf7_b'])
+    else:
+        fc7_b = tf.add(tf.matmul(fc6_b, weights['wf7_bb']), biases['bf7_b'])
+    fc7_b = tf.nn.relu(fc7_b)
+    fc7_b = tf.nn.dropout(fc7_b, keep_dropout)
 
+    ###############################################################################################
+    #### Singleton branch
+    
+    # FC + Output FC
+    if extra_fully_connected_layer_before_output:
+        fc8 = tf.add(tf.matmul(fc7_t, weights['wf8_t']) + tf.matmul(fc7_b, weights['wf8_b']), biases['bf8'])
+        out = tf.add(tf.matmul(fc8, weights['wo']), biases['bo'])
+    
     # Output FC
-    out = tf.add(tf.matmul(fc7, weights['wo']) + tf.matmul(fc7_2, weights_2['wo']), biases['bo'])
-    
+    else:
+        out = tf.add(tf.matmul(fc7_t, weights['wo_t']) + tf.matmul(fc7_b, weights['wo_b']), biases['bo'])
+            
     return out
 
 # Construct dataloader

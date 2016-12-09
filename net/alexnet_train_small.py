@@ -21,26 +21,22 @@ start_from = ''
 
 def alexnet(x, keep_dropout):
     weights = {
-        'wc1': tf.Variable(tf.random_normal([11, 11, 3, 96], stddev=np.sqrt(2./(11*11*3)))),
-        'wc2': tf.Variable(tf.random_normal([5, 5, 96, 256], stddev=np.sqrt(2./(5*5*96)))),
-        'wc3': tf.Variable(tf.random_normal([3, 3, 256, 384], stddev=np.sqrt(2./(3*3*256)))),
-        'wc4': tf.Variable(tf.random_normal([3, 3, 384, 256], stddev=np.sqrt(2./(3*3*384)))),
-        'wc5': tf.Variable(tf.random_normal([3, 3, 256, 256], stddev=np.sqrt(2./(3*3*256)))),
+        'wc1': tf.Variable(tf.random_normal([11, 11, 3, 24], stddev=np.sqrt(2./(11*11*3)))),
+        'wc2': tf.Variable(tf.random_normal([5, 5, 24, 64], stddev=np.sqrt(2./(5*5*24)))),
+        'wc5': tf.Variable(tf.random_normal([3, 3, 64, 64], stddev=np.sqrt(2./(3*3*64)))),
 
-        'wf6': tf.Variable(tf.random_normal([7*7*256, 4096], stddev=np.sqrt(2./(7*7*256)))),
-        'wf7': tf.Variable(tf.random_normal([4096, 4096], stddev=np.sqrt(2./4096))),
-        'wo': tf.Variable(tf.random_normal([4096, 100], stddev=np.sqrt(2./4096)))
+        'wf6': tf.Variable(tf.random_normal([7*7*64, 1024], stddev=np.sqrt(2./(7*7*64)))),
+        'wf7': tf.Variable(tf.random_normal([1024, 1024], stddev=np.sqrt(2./1024))),
+        'wo': tf.Variable(tf.random_normal([1024, 100], stddev=np.sqrt(2./1024)))
     }
 
     biases = {
-        'bc1': tf.Variable(tf.zeros(96)),
-        'bc2': tf.Variable(tf.zeros(256)),
-        'bc3': tf.Variable(tf.zeros(384)),
-        'bc4': tf.Variable(tf.zeros(256)),
-        'bc5': tf.Variable(tf.zeros(256)),
+        'bc1': tf.Variable(tf.zeros(24)),
+        'bc2': tf.Variable(tf.zeros(64)),
+        'bc5': tf.Variable(tf.zeros(64)),
 
-        'bf6': tf.Variable(tf.zeros(4096)),
-        'bf7': tf.Variable(tf.zeros(4096)),
+        'bf6': tf.Variable(tf.zeros(1024)),
+        'bf7': tf.Variable(tf.zeros(1024)),
         'bo': tf.Variable(tf.zeros(100))
     }
 
@@ -57,17 +53,17 @@ def alexnet(x, keep_dropout):
     pool2 = tf.nn.max_pool(lrn2, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
 
     # Conv + ReLU, 13-> 13
-    conv3 = tf.nn.conv2d(pool2, weights['wc3'], strides=[1, 1, 1, 1], padding='SAME')
-    conv3 = tf.nn.relu(tf.nn.bias_add(conv3, biases['bc3']))
+    #conv3 = tf.nn.conv2d(pool2, weights['wc3'], strides=[1, 1, 1, 1], padding='SAME')
+    #conv3 = tf.nn.relu(tf.nn.bias_add(conv3, biases['bc3']))
 
     # Conv + ReLU, 13-> 13
-    conv4 = tf.nn.conv2d(conv3, weights['wc4'], strides=[1, 1, 1, 1], padding='SAME')
-    conv4 = tf.nn.relu(tf.nn.bias_add(conv4, biases['bc4']))
+    #conv4 = tf.nn.conv2d(conv3, weights['wc4'], strides=[1, 1, 1, 1], padding='SAME')
+    #conv4 = tf.nn.relu(tf.nn.bias_add(conv4, biases['bc4']))
 
     # Conv + ReLU + Pool, 13->6
-    conv5 = tf.nn.conv2d(conv4, weights['wc5'], strides=[1, 1, 1, 1], padding='SAME')
-    conv5 = tf.nn.relu(tf.nn.bias_add(conv5, biases['bc5']))
-    pool5 = tf.nn.max_pool(conv5, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
+    conv5 = tf.nn.conv2d(conv2, weights['wc5'], strides=[1, 1, 1, 1], padding='SAME')
+    conv5 = tf.nn.relu(tf.nn.bias_add(conv2, biases['bc5']))
+    pool5 = tf.nn.max_pool(conv2, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
 
     # FC + ReLU + Dropout
     fc6 = tf.reshape(pool5, [-1, weights['wf6'].get_shape().as_list()[0]])

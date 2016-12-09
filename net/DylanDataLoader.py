@@ -32,6 +32,7 @@ class DataLoaderH5(object):
         
         for i in range(batch_size):
             image = self.im_set[self._idx]
+            image = image.astype(np.float32)/255.
             if self.randomize:
                 flip = np.random.random_integers(0, 1)
                 if flip > 0:

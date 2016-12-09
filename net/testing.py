@@ -27,20 +27,20 @@ loader_train = DataLoaderH5(**opt_data_train)
 images_batch, labels_batch = loader_train.next_batch(batch_size)
 
 
-# filt = [[1.0/16, 2.0/16, 1.0/16],
-#         [2.0/16, 4.0/16, 2.0/16],
-#         [1.0/16, 2.0/16, 1.0/16]]
-filt = [[1.0/16, 2.0/16, 1.0/16],
-        [2.0/16, 4.0/16, 2.0/16],
-        [1.0/16, 2.0/16, 1.0/16]]
-const = tf.constant([[filt for i in range(3)] for j in range(3)], dtype=np.float64)
+filt = [[1, 0, 0],
+        [0, 1, 0],
+        [0, 0, 1]]
+const = tf.constant([[filt for i in range(1)] for j in range(1)], dtype=np.float32)
 # norm = tf.random_normal([3, 3, 3, 3], stddev=np.sqrt(2. / (11 * 11 * 3)))
 
 
 
 
 # tf Graph input
-img_tf = tf.Variable(images_batch, [None, fine_size, fine_size, c], dtype=np.float64)
+img_tf = tf.Variable(images_batch, [None, fine_size, fine_size, c], dtype=np.float32)
+
+# Change data
+# out = tf.image.rgb_to_grayscale(img_tf, name=None)
 
 # Apply blur
 out = tf.nn.conv2d(img_tf, const, strides=[1, 1, 1, 1], padding='SAME')
@@ -51,13 +51,11 @@ out = tf.nn.conv2d(img_tf, const, strides=[1, 1, 1, 1], padding='SAME')
 init = tf.initialize_all_variables()
 sess = tf.Session()
 sess.run(init)
-new_imgs_batch = sess.run(out)
+filtered_batch = sess.run(out)
 
-kernel = sess.run(const)
-print kernel
-
+print filtered_batch[0]
 
 plt.imshow(images_batch[0])
 plt.show()
-plt.imshow(new_imgs_batch[0])
+plt.imshow(filtered_batch[0])
 plt.show()

@@ -44,7 +44,7 @@ def alexnet(x, keep_dropout):
         'wf7_bb': tf.Variable(tf.random_normal([4096, 4096], stddev=np.sqrt(2. / 4096))),
         'wf7_bt': tf.Variable(tf.random_normal([4096, 4096], stddev=np.sqrt(2. / 4096))),
 
-        'wo_top': tf.Variable(tf.random_normal([4096, 100], stddev=np.sqrt(2. / 4096)))
+        'wo_top': tf.Variable(tf.random_normal([4096, 100], stddev=np.sqrt(2. / 4096))),
         'wo_bot': tf.Variable(tf.random_normal([4096, 100], stddev=np.sqrt(2. / 4096)))
     }
 

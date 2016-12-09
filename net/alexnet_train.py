@@ -20,6 +20,7 @@ path_save = 'alexnet'
 start_from = ''
 
 def alexnet(x, keep_dropout):
+    print "HIHIHIHIHIHIHI"
     weights = {
         'wc1': tf.Variable(tf.random_normal([11, 11, 3, 96], stddev=np.sqrt(2./(11*11*3)))),
         'wc2': tf.Variable(tf.random_normal([5, 5, 96, 256], stddev=np.sqrt(2./(5*5*96)))),

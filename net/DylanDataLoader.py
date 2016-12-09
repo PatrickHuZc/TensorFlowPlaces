@@ -19,23 +19,22 @@ class DataLoaderH5(object):
         self.lab_set = f['labels']
 
         self.num = self.im_set.shape[0]
-        assert self.im_set.shape[0]==self.lab_set.shape[0], '#images and #labels do not match!'
-        assert self.im_set.shape[1]==self.load_size, 'Image size error!'
-        assert self.im_set.shape[2]==self.load_size, 'Image size error!'
+        assert self.im_set.shape[0] == self.lab_set.shape[0], '#images and #labels do not match!'
+        assert self.im_set.shape[1] == self.load_size, 'Image size error!'
+        assert self.im_set.shape[2] == self.load_size, 'Image size error!'
         print('# Images found:'), self.num
 
         self._idx = 0
         
     def next_batch(self, batch_size):
         labels_batch = np.zeros(batch_size)
-        images_batch = np.zeros((batch_size, self.fine_size, self.fine_size, 3)) 
+        images_batch = np.zeros((batch_size, self.fine_size, self.fine_size, 3))
         
         for i in range(batch_size):
             image = self.im_set[self._idx]
-            image = image.astype(np.float32)/255. - self.data_mean
             if self.randomize:
                 flip = np.random.random_integers(0, 1)
-                if flip>0:
+                if flip > 0:
                     image = image[:,::-1,:]
                 offset_h = np.random.random_integers(0, self.load_size-self.fine_size)
                 offset_w = np.random.random_integers(0, self.load_size-self.fine_size)
@@ -45,11 +44,10 @@ class DataLoaderH5(object):
 
             images_batch[i, ...] = image[offset_h:offset_h+self.fine_size, offset_w:offset_w+self.fine_size, :]
             labels_batch[i, ...] = self.lab_set[self._idx]
-            
+
             self._idx += 1
             if self._idx == self.num:
                 self._idx = 0
-        
         return images_batch, labels_batch
     
     def size(self):

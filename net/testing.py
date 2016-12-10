@@ -26,20 +26,27 @@ loader_train = DataLoaderH5(**opt_data_train)
 # Load Data
 images_batch, labels_batch = loader_train.next_batch(batch_size)
 
+# # Color filter
+# filt = [[0, 0, 0],
+#         [0, 1, 0],
+#         [0, 0, 0]]
+# const = tf.constant([[filt for i in range(1)] for j in range(1)], dtype=np.float32)
 
-filt = [[1, 0, 0],
-        [0, 1, 0],
-        [0, 0, 1]]
-const = tf.constant([[filt for i in range(1)] for j in range(1)], dtype=np.float32)
-# norm = tf.random_normal([3, 3, 3, 3], stddev=np.sqrt(2. / (11 * 11 * 3)))
-
-
-
+# # Normal filter
+filt = [[0.0, 0.0, 0.0],
+        [0.0, 1.0, 0.0],
+        [0.0, 0.0, 0.0]]
+kernel = np.zeros([1, 3, 3, 3])
+for i in range(3):
+    for j in range(3):
+        kernel[:, i, j, :] = filt[i][j]
+print kernel
+const = tf.constant(kernel, dtype=np.float32)
 
 # tf Graph input
 img_tf = tf.Variable(images_batch, [None, fine_size, fine_size, c], dtype=np.float32)
 
-# Change data
+# # Change data
 # out = tf.image.rgb_to_grayscale(img_tf, name=None)
 
 # Apply blur
@@ -53,9 +60,8 @@ sess = tf.Session()
 sess.run(init)
 filtered_batch = sess.run(out)
 
-print filtered_batch[0]
-
 plt.imshow(images_batch[0])
 plt.show()
+print filtered_batch[0].shape
 plt.imshow(filtered_batch[0])
 plt.show()

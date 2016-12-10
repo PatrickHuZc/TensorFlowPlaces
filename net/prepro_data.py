@@ -44,11 +44,11 @@ def createH5(params):
 
 if __name__=='__main__':
 	params_train = {
-		'name': 'miniplaces_reduced',
+		'name': 'miniplaces',
 		'split': 'train',
 		'img_resize': 256,
 		'data_root': '../data/images/',	# MODIFY PATH ACCORDINGLY
-    		'data_list': '../data/train_reduced.txt'	# MODIFY PATH ACCORDINGLY	
+    		'data_list': '../data/train.txt'	# MODIFY PATH ACCORDINGLY	
 	}
 
 	params_val = {

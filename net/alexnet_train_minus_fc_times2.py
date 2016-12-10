@@ -4,7 +4,7 @@ import tensorflow as tf
 from DataLoader import *
 
 # Dataset Parameters
-batch_size = 100
+batch_size = 200
 load_size = 256
 fine_size = 224
 c = 3
@@ -15,32 +15,28 @@ learning_rate = 0.001
 dropout = 0.5 # Dropout, probability to keep units
 training_iters = 10000
 step_display = 100
-step_save = 500
-path_save = 'alexnet_small_full'
+step_save = 2000
+path_save = 'alexnet_minus_fc_times2'
 start_from = ''
 
 def alexnet(x, keep_dropout):
     weights = {
-        'wc1': tf.Variable(tf.random_normal([11, 11, 3, 24], stddev=np.sqrt(2./(11*11*3)))),
-        'wc2': tf.Variable(tf.random_normal([5, 5, 24, 64], stddev=np.sqrt(2./(5*5*24)))),
-        'wc3': tf.Variable(tf.random_normal([5, 5, 64, 96], stddev=np.sqrt(2./(5*5*64)))),
-        'wc4': tf.Variable(tf.random_normal([5, 5, 96, 64], stddev=np.sqrt(2./(5*5*96)))),
-        'wc5': tf.Variable(tf.random_normal([3, 3, 64, 64], stddev=np.sqrt(2./(3*3*64)))),
+        'wc1': tf.Variable(tf.random_normal([11, 11, 3, 96*2], stddev=np.sqrt(2./(11*11*3)))),
+        'wc2': tf.Variable(tf.random_normal([5, 5, 96*2, 256*2], stddev=np.sqrt(2./(5*5*96*2)))),
+        'wc3': tf.Variable(tf.random_normal([3, 3, 256*2, 384*2], stddev=np.sqrt(2./(3*3*256*2)))),
+        'wc4': tf.Variable(tf.random_normal([3, 3, 384*2, 256*2], stddev=np.sqrt(2./(3*3*384*2)))),
+        'wc5': tf.Variable(tf.random_normal([3, 3, 256*2, 256*2], stddev=np.sqrt(2./(3*3*256*2)))),
 
-        'wf6': tf.Variable(tf.random_normal([7*7*256/4, 1024], stddev=np.sqrt(2./(7*7*256)))),
-        'wf7': tf.Variable(tf.random_normal([1024, 1024], stddev=np.sqrt(2./1024))),
-        'wo': tf.Variable(tf.random_normal([1024, 100], stddev=np.sqrt(2./1024)))
+        'wf6': tf.Variable(tf.random_normal([7*7*256*2, 100], stddev=np.sqrt(2./(7*7*256*2)))),
     }
 
     biases = {
-        'bc1': tf.Variable(tf.zeros(24)),
-        'bc2': tf.Variable(tf.zeros(64)),
-        'bc3': tf.Variable(tf.zeros(96)),
-        'bc4': tf.Variable(tf.zeros(64)),
-        'bc5': tf.Variable(tf.zeros(64)),
+        'bc1': tf.Variable(tf.zeros(96*2)),
+        'bc2': tf.Variable(tf.zeros(256*2)),
+        'bc3': tf.Variable(tf.zeros(384*2)),
+        'bc4': tf.Variable(tf.zeros(256*2)),
+        'bc5': tf.Variable(tf.zeros(256*2)),
 
-        'bf6': tf.Variable(tf.zeros(1024)),
-        'bf7': tf.Variable(tf.zeros(1024)),
         'bo': tf.Variable(tf.zeros(100))
     }
 
@@ -66,22 +62,22 @@ def alexnet(x, keep_dropout):
 
     # Conv + ReLU + Pool, 13->6
     conv5 = tf.nn.conv2d(conv4, weights['wc5'], strides=[1, 1, 1, 1], padding='SAME')
-    conv5 = tf.nn.relu(tf.nn.bias_add(conv4, biases['bc5']))
-    pool5 = tf.nn.max_pool(conv4, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
+    conv5 = tf.nn.relu(tf.nn.bias_add(conv5, biases['bc5']))
+    pool5 = tf.nn.max_pool(conv5, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
 
     # FC + ReLU + Dropout
     fc6 = tf.reshape(pool5, [-1, weights['wf6'].get_shape().as_list()[0]])
-    fc6 = tf.add(tf.matmul(fc6, weights['wf6']), biases['bf6'])
-    fc6 = tf.nn.relu(fc6)
-    fc6 = tf.nn.dropout(fc6, keep_dropout)
+    #fc6 = tf.add(tf.matmul(fc6, weights['wf6']), biases['bf6'])
+    #fc6 = tf.nn.relu(fc6)
+    #fc6 = tf.nn.dropout(fc6, keep_dropout)
     
     # FC + ReLU + Dropout
-    fc7 = tf.add(tf.matmul(fc6, weights['wf7']), biases['bf7'])
-    fc7 = tf.nn.relu(fc7)
-    fc7 = tf.nn.dropout(fc7, keep_dropout)
+    #fc7 = tf.add(tf.matmul(fc6, weights['wf7']), biases['bf7'])
+    #fc7 = tf.nn.relu(fc7)
+    #fc7 = tf.nn.dropout(fc7, keep_dropout)
 
     # Output FC
-    out = tf.add(tf.matmul(fc7, weights['wo']), biases['bo'])
+    out = tf.add(tf.matmul(fc6, weights['wf6']), biases['bo'])
     
     return out
 
@@ -127,8 +123,8 @@ accuracy1 = tf.reduce_mean(tf.cast(tf.nn.in_top_k(logits, y, 1), tf.float32))
 accuracy5 = tf.reduce_mean(tf.cast(tf.nn.in_top_k(logits, y, 5), tf.float32))
 
 # define initialization
-init = tf.initialize_all_variables() #CPU
-# init = tf.global_variables_initializer() # GPU
+init = tf.initialize_all_variables() #old
+#init = tf.global_variables_initializer() # GPU
 
 # define saver
 saver = tf.train.Saver()
@@ -147,7 +143,6 @@ with tf.Session() as sess:
     step = 0
 
     while step < training_iters:
-        
         # Load a batch of training data
         images_batch, labels_batch = loader_train.next_batch(batch_size)
         print '[%s]:' %(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")), "Iter " + str(step)
@@ -174,7 +169,7 @@ with tf.Session() as sess:
         sess.run(train_optimizer, feed_dict={x: images_batch, y: labels_batch, keep_dropout: dropout})
         
         step += 1
-                
+        
         # Save model
         if step % step_save == 0:
             saver.save(sess, path_save, global_step=step)

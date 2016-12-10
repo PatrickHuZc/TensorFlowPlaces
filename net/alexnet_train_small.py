@@ -4,7 +4,7 @@ import tensorflow as tf
 from DataLoader import *
 
 # Dataset Parameters
-batch_size = 200
+batch_size = 100
 load_size = 256
 fine_size = 224
 c = 3
@@ -25,7 +25,7 @@ def alexnet(x, keep_dropout):
         'wc2': tf.Variable(tf.random_normal([5, 5, 24, 64], stddev=np.sqrt(2./(5*5*24)))),
         'wc5': tf.Variable(tf.random_normal([3, 3, 64, 64], stddev=np.sqrt(2./(3*3*64)))),
 
-        'wf6': tf.Variable(tf.random_normal([7*7*64, 1024], stddev=np.sqrt(2./(7*7*64)))),
+        'wf6': tf.Variable(tf.random_normal([7*7*256, 1024], stddev=np.sqrt(2./(7*7*256)))),
         'wf7': tf.Variable(tf.random_normal([1024, 1024], stddev=np.sqrt(2./1024))),
         'wo': tf.Variable(tf.random_normal([1024, 100], stddev=np.sqrt(2./1024)))
     }

@@ -127,8 +127,8 @@ accuracy1 = tf.reduce_mean(tf.cast(tf.nn.in_top_k(logits, y, 1), tf.float32))
 accuracy5 = tf.reduce_mean(tf.cast(tf.nn.in_top_k(logits, y, 5), tf.float32))
 
 # define initialization
-#init = tf.initialize_all_variables() #CPU
-init = tf.global_variables_initializer() # GPU
+init = tf.initialize_all_variables() #old
+#init = tf.global_variables_initializer() # GPU
 
 # define saver
 saver = tf.train.Saver()

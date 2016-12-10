@@ -1,10 +1,10 @@
 import os, datetime
 import numpy as np
 import tensorflow as tf
-from DataLoader2 import *
+from DataLoader import *
 
 # Dataset Parameters
-batch_size = 200
+batch_size = 100
 load_size = 256
 fine_size = 224
 c = 3
@@ -21,28 +21,22 @@ start_from = ''
 
 def alexnet(x, keep_dropout):
     weights = {
-        'wc1': tf.Variable(tf.random_normal([11, 11, 3, 96], stddev=np.sqrt(2./(11*11*3)))),
-        'wc2': tf.Variable(tf.random_normal([5, 5, 96, 256], stddev=np.sqrt(2./(5*5*96)))),
-        'wc3': tf.Variable(tf.random_normal([3, 3, 256, 384], stddev=np.sqrt(2./(3*3*256)))),
-        'wc4': tf.Variable(tf.random_normal([3, 3, 384, 384], stddev=np.sqrt(2./(3*3*384)))),
-        'wc5': tf.Variable(tf.random_normal([3, 3, 384, 256], stddev=np.sqrt(2./(3*3*384)))),
-        'wc6': tf.Variable(tf.random_normal([3, 3, 256, 256], stddev=np.sqrt(2./(3*3*256)))),
+        'wc1': tf.Variable(tf.random_normal([11, 11, 3, 24], stddev=np.sqrt(2./(11*11*3)))),
+        'wc2': tf.Variable(tf.random_normal([5, 5, 24, 64], stddev=np.sqrt(2./(5*5*24)))),
+        'wc5': tf.Variable(tf.random_normal([3, 3, 64, 64], stddev=np.sqrt(2./(3*3*64)))),
 
-        'wf7': tf.Variable(tf.random_normal([7*7*256, 4096], stddev=np.sqrt(2./(7*7*256)))),
-        'wf8': tf.Variable(tf.random_normal([4096, 4096], stddev=np.sqrt(2./4096))),
-        'wo': tf.Variable(tf.random_normal([4096, 100], stddev=np.sqrt(2./4096)))
+        'wf6': tf.Variable(tf.random_normal([7*7*256, 1024], stddev=np.sqrt(2./(7*7*256)))),
+        'wf7': tf.Variable(tf.random_normal([1024, 1024], stddev=np.sqrt(2./1024))),
+        'wo': tf.Variable(tf.random_normal([1024, 100], stddev=np.sqrt(2./1024)))
     }
 
     biases = {
-        'bc1': tf.Variable(tf.zeros(96)),
-        'bc2': tf.Variable(tf.zeros(256)),
-        'bc3': tf.Variable(tf.zeros(384)),
-        'bc4': tf.Variable(tf.zeros(384)),
-        'bc5': tf.Variable(tf.zeros(256)),
-        'bc6': tf.Variable(tf.zeros(256)),
+        'bc1': tf.Variable(tf.zeros(24)),
+        'bc2': tf.Variable(tf.zeros(64)),
+        'bc5': tf.Variable(tf.zeros(64)),
 
-        'bf7': tf.Variable(tf.zeros(4096)),
-        'bf8': tf.Variable(tf.zeros(4096)),
+        'bf6': tf.Variable(tf.zeros(1024)),
+        'bf7': tf.Variable(tf.zeros(1024)),
         'bo': tf.Variable(tf.zeros(100))
     }
 
@@ -59,41 +53,37 @@ def alexnet(x, keep_dropout):
     pool2 = tf.nn.max_pool(lrn2, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
 
     # Conv + ReLU, 13-> 13
-    conv3 = tf.nn.conv2d(pool2, weights['wc3'], strides=[1, 1, 1, 1], padding='SAME')
-    conv3 = tf.nn.relu(tf.nn.bias_add(conv3, biases['bc3']))
-    
-    # Conv + ReLU, 13-> 13
-    conv4 = tf.nn.conv2d(conv3, weights['wc4'], strides=[1, 1, 1, 1], padding='SAME')
-    conv4 = tf.nn.relu(tf.nn.bias_add(conv4, biases['bc4']))
+    #conv3 = tf.nn.conv2d(pool2, weights['wc3'], strides=[1, 1, 1, 1], padding='SAME')
+    #conv3 = tf.nn.relu(tf.nn.bias_add(conv3, biases['bc3']))
 
     # Conv + ReLU, 13-> 13
-    conv5 = tf.nn.conv2d(conv4, weights['wc5'], strides=[1, 1, 1, 1], padding='SAME')
-    conv5 = tf.nn.relu(tf.nn.bias_add(conv5, biases['bc5']))
+    #conv4 = tf.nn.conv2d(conv3, weights['wc4'], strides=[1, 1, 1, 1], padding='SAME')
+    #conv4 = tf.nn.relu(tf.nn.bias_add(conv4, biases['bc4']))
 
     # Conv + ReLU + Pool, 13->6
-    conv6 = tf.nn.conv2d(conv5, weights['wc6'], strides=[1, 1, 1, 1], padding='SAME')
-    conv6 = tf.nn.relu(tf.nn.bias_add(conv6, biases['bc6']))
-    pool6 = tf.nn.max_pool(conv6, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
+    conv5 = tf.nn.conv2d(conv2, weights['wc5'], strides=[1, 1, 1, 1], padding='SAME')
+    conv5 = tf.nn.relu(tf.nn.bias_add(conv2, biases['bc5']))
+    pool5 = tf.nn.max_pool(conv2, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
 
     # FC + ReLU + Dropout
-    fc7 = tf.reshape(pool6, [-1, weights['wf7'].get_shape().as_list()[0]])
-    fc7 = tf.add(tf.matmul(fc7, weights['wf7']), biases['bf7'])
-    fc7 = tf.nn.relu(fc7)
-    fc7 = tf.nn.dropout(fc7, keep_dropout)
+    fc6 = tf.reshape(pool5, [-1, weights['wf6'].get_shape().as_list()[0]])
+    fc6 = tf.add(tf.matmul(fc6, weights['wf6']), biases['bf6'])
+    fc6 = tf.nn.relu(fc6)
+    fc6 = tf.nn.dropout(fc6, keep_dropout)
     
     # FC + ReLU + Dropout
-    fc8 = tf.add(tf.matmul(fc7, weights['wf8']), biases['bf8'])
-    fc8 = tf.nn.relu(fc8)
-    fc8 = tf.nn.dropout(fc8, keep_dropout)
+    fc7 = tf.add(tf.matmul(fc6, weights['wf7']), biases['bf7'])
+    fc7 = tf.nn.relu(fc7)
+    fc7 = tf.nn.dropout(fc7, keep_dropout)
 
     # Output FC
-    out = tf.add(tf.matmul(fc8, weights['wo']), biases['bo'])
+    out = tf.add(tf.matmul(fc7, weights['wo']), biases['bo'])
     
     return out
 
 # Construct dataloader
 opt_data_train = {
-    'data_h5': 'miniplaces_256_train.h5',
+    'data_h5': 'miniplaces_reduced_256_train.h5',
     #'data_root': 'YOURPATH/images/',   # MODIFY PATH ACCORDINGLY
     #'data_list': 'YOURPATH/train.txt', # MODIFY PATH ACCORDINGLY
     'load_size': load_size,
@@ -133,7 +123,8 @@ accuracy1 = tf.reduce_mean(tf.cast(tf.nn.in_top_k(logits, y, 1), tf.float32))
 accuracy5 = tf.reduce_mean(tf.cast(tf.nn.in_top_k(logits, y, 5), tf.float32))
 
 # define initialization
-init = tf.initialize_all_variables()
+init = tf.initialize_all_variables() #CPU
+# init = tf.global_variables_initializer() # GPU
 
 # define saver
 saver = tf.train.Saver()
@@ -153,7 +144,7 @@ with tf.Session() as sess:
 
     while step < training_iters:
         # Load a batch of training data
-        images_batch, labels_batch, hsv_batch = loader_train.next_batch(batch_size)
+        images_batch, labels_batch = loader_train.next_batch(batch_size)
         
         if step % step_display == 0:
             print '[%s]:' %(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
@@ -166,7 +157,7 @@ with tf.Session() as sess:
             "{:.2f}".format(acc5)
 
             # Calculate batch loss and accuracy on validation set
-            images_batch_val, labels_batch_val, hsv_batch_val = loader_val.next_batch(batch_size)    
+            images_batch_val, labels_batch_val = loader_val.next_batch(batch_size)    
             l, acc1, acc5 = sess.run([loss, accuracy1, accuracy5], feed_dict={x: images_batch_val, y: labels_batch_val, keep_dropout: 1.}) 
             print "-Iter " + str(step) + ", Validation Loss= " + \
             "{:.4f}".format(l) + ", Accuracy Top1 = " + \

@@ -16,7 +16,7 @@ dropout = 0.5 # Dropout, probability to keep units
 training_iters = 100000
 step_display = 1
 step_save = 10000
-path_save = 'alexnet'
+path_save = 'alexnet_small_reduced'
 start_from = ''
 
 def alexnet(x, keep_dropout):

@@ -1,4 +1,3 @@
 .idea/
-data/
 net/miniplaces_256_train.h5
 net/miniplaces_256_val.h5

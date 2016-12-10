@@ -68,8 +68,8 @@ def alexnet(x, keep_dropout):
     pool5 = tf.nn.max_pool(conv5, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')
     
     # Conv + ReLU + Pool, 13->6
-    conv7 = tf.nn.conv2d(conv5, weights['wc7'], strides=[1, 1, 1, 1], padding='SAME')
-    conv7 = tf.nn.relu(tf.nn.bias_add(conv5, biases['bc6']))
+    conv7 = tf.nn.conv2d(pool5, weights['wc7'], strides=[1, 1, 1, 1], padding='SAME')
+    conv7 = tf.nn.relu(tf.nn.bias_add(conv7, biases['bc6']))
 
     # FC + ReLU + Dropout
     fc6 = tf.reshape(conv7, [-1, weights['wf6'].get_shape().as_list()[0]])

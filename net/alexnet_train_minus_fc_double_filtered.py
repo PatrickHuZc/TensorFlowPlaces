@@ -92,7 +92,7 @@ def alexnet(x, filter_kernel):
     #### BRANCH 2
     
     # Conv + ReLU + LRN + Pool, 224->55->27
-    conv1_b = tf.nn.conv2d(x, weights['wc1_b'], strides=[1, 4, 4, 1], padding='SAME')
+    conv1_b = tf.nn.conv2d(x_bot, weights['wc1_b'], strides=[1, 4, 4, 1], padding='SAME')
     conv1_b = tf.nn.relu(tf.nn.bias_add(conv1_b, biases['bc1_b']))
     lrn1_b = tf.nn.local_response_normalization(conv1_b, depth_radius=5, bias=1.0, alpha=1e-4, beta=0.75)
     pool1_b = tf.nn.max_pool(lrn1_b, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME')

@@ -162,7 +162,7 @@ kernel = np.zeros([3, 3, 3, 1])
 for i in range(3):
     for j in range(3):
         kernel[i, j, :, :] = filt[i][j] / 16
-kernel = tf.constant(kernel, dtype=np.float64)
+kernel = tf.constant(kernel, dtype=np.float32)
 
 # tf Graph input
 x = tf.placeholder(tf.float32, [None, fine_size, fine_size, c])
